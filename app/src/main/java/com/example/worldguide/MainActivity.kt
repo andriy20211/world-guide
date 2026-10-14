@@ -7,10 +7,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.worldguide.model.Country
@@ -38,15 +40,25 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainCatalogScreen() {
+    // Список усіх доступних варіантів фільтрації
+    val regions = remember { listOf("Всі", "Europe", "Asia", "Americas", "Africa", "Oceania") }
+
+    // Піднятий стан (State Hoisting) обраного регіону
+    var selectedRegion by remember { mutableStateOf("Всі") }
+
+    // Відфільтрований список країн
+    val filteredCountries = remember(selectedRegion) {
+        if (selectedRegion == "Всі") {
+            sampleCountries
+        } else {
+            sampleCountries.filter { it.region.equals(selectedRegion, ignoreCase = true) }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "WorldGuide — Каталог країн",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("WorldGuide — Каталог країн", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -54,16 +66,92 @@ fun MainCatalogScreen() {
             )
         }
     ) { innerPadding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding)
         ) {
-            items(sampleCountries) { country ->
-                CountryCard(country = country)
+            // Рядок перемикачів фільтрації
+            RegionFilterChips(
+                options = regions,
+                selectedOption = selectedRegion,
+                onOptionSelected = { newRegion -> selectedRegion = newRegion }
+            )
+
+            // Контент: або список, або стан "Нічого не знайдено"
+            if (filteredCountries.isEmpty()) {
+                EmptyStateView(selectedRegion = selectedRegion)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(filteredCountries) { country ->
+                        CountryCard(country = country)
+                    }
+                }
             }
+        }
+    }
+}
+
+// Компонент перемикачів варіантів (чипи)
+@Composable
+fun RegionFilterChips(
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(options) { option ->
+            FilterChip(
+                selected = (option == selectedOption),
+                onClick = { onOptionSelected(option) },
+                label = { Text(text = option) }
+            )
+        }
+    }
+}
+
+// Компонент для випадку, коли за обраним фільтром країн немає
+@Composable
+fun EmptyStateView(selectedRegion: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "🔍",
+                fontSize = 48.sp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Країн у регіоні «$selectedRegion» не знайдено",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Спробуйте обрати інший регіон зі списку вище.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -71,15 +159,11 @@ fun MainCatalogScreen() {
 @Composable
 fun CountryCard(country: Country) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Box: Зображення прапора та плашка з регіоном поверх нього
+        Column(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -94,7 +178,6 @@ fun CountryCard(country: Country) {
                     )
                 }
 
-                // Етикетка-позначка (Box поверх прапора)
                 Text(
                     text = country.region,
                     color = Color.White,
@@ -109,7 +192,6 @@ fun CountryCard(country: Country) {
                 )
             }
 
-            // Інформаційна частина картки
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -123,7 +205,6 @@ fun CountryCard(country: Country) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Характеристика 1: Столиця (Row)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -141,7 +222,6 @@ fun CountryCard(country: Country) {
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Характеристика 2: Населення (Row)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
