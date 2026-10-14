@@ -22,8 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.worldguide.model.Country
-import com.example.worldguide.model.sampleCountries
+import com.example.worldguide.ui.MainViewModel
 import com.example.worldguide.ui.theme.WorldGuideTheme
 
 class MainActivity : ComponentActivity() {
@@ -39,21 +40,12 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainCatalogScreen() {
-    // Список усіх доступних варіантів фільтрації
-    val regions = remember { listOf("Всі", "Europe", "Asia", "Americas", "Africa", "Oceania") }
-
-    // Піднятий стан (State Hoisting) обраного регіону
-    var selectedRegion by remember { mutableStateOf("Всі") }
-
-    // Відфільтрований список країн
-    val filteredCountries = remember(selectedRegion) {
-        if (selectedRegion == "Всі") {
-            sampleCountries
-        } else {
-            sampleCountries.filter { it.region.equals(selectedRegion, ignoreCase = true) }
-        }
-    }
+fun MainCatalogScreen(
+    // Отримуємо ViewModel штатним способом за допомогою viewModel()
+    viewModel: MainViewModel = viewModel()
+) {
+    // Підписуємося на стан ViewModel
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -71,23 +63,24 @@ fun MainCatalogScreen() {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Рядок перемикачів фільтрації
+            // Передаємо варіанти, обране значення та викликаємо подію ViewModel
             RegionFilterChips(
-                options = regions,
-                selectedOption = selectedRegion,
-                onOptionSelected = { newRegion -> selectedRegion = newRegion }
+                options = uiState.availableRegions,
+                selectedOption = uiState.selectedRegion,
+                onOptionSelected = { newRegion ->
+                    viewModel.selectRegion(newRegion)
+                }
             )
 
-            // Контент: або список, або стан "Нічого не знайдено"
-            if (filteredCountries.isEmpty()) {
-                EmptyStateView(selectedRegion = selectedRegion)
+            if (uiState.filteredCountries.isEmpty()) {
+                EmptyStateView(selectedRegion = uiState.selectedRegion)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(filteredCountries) { country ->
+                    items(uiState.filteredCountries) { country ->
                         CountryCard(country = country)
                     }
                 }
@@ -96,7 +89,6 @@ fun MainCatalogScreen() {
     }
 }
 
-// Компонент перемикачів варіантів (чипи)
 @Composable
 fun RegionFilterChips(
     options: List<String>,
@@ -121,7 +113,6 @@ fun RegionFilterChips(
     }
 }
 
-// Компонент для випадку, коли за обраним фільтром країн немає
 @Composable
 fun EmptyStateView(selectedRegion: String) {
     Box(
@@ -134,10 +125,7 @@ fun EmptyStateView(selectedRegion: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "🔍",
-                fontSize = 48.sp
-            )
+            Text(text = "🔍", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Країн у регіоні «$selectedRegion» не знайдено",
