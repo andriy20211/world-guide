@@ -105,7 +105,6 @@ fun MainCatalogScreen(
             TopAppBar(
                 title = { Text("WorldGuide — Каталог", fontWeight = FontWeight.Bold) },
                 actions = {
-                    // Кнопка входу на екран налаштувань
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -125,15 +124,27 @@ fun MainCatalogScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Рядок чипів для фільтрації за регіоном
             RegionFilterChips(
                 options = uiState.availableRegions,
                 selectedOption = uiState.selectedRegion,
                 onOptionSelected = onRegionSelected
             )
 
-            if (uiState.filteredCountries.isEmpty()) {
+            // Перевірка стану завантаження
+            if (uiState.isLoading) {
+                // Показуємо спінер по центру екрана, поки іде мережевий запит
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.filteredCountries.isEmpty()) {
+                // Порожній стан
                 EmptyStateView(selectedRegion = uiState.selectedRegion)
             } else {
+                // Список країн
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
