@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +34,7 @@ import androidx.navigation.navArgument
 import com.example.worldguide.model.Country
 import com.example.worldguide.ui.DetailScreen
 import com.example.worldguide.ui.MainViewModel
+import com.example.worldguide.ui.SettingsScreen
 import com.example.worldguide.ui.theme.WorldGuideTheme
 
 class MainActivity : ComponentActivity() {
@@ -45,25 +48,26 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Позиціювання NavHost та маршутизація екранів
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    viewModel: MainViewModel = viewModel()
+) {
     val navController = rememberNavController()
+    val uiState by viewModel.uiState.collectAsState()
 
     NavHost(
         navController = navController,
         startDestination = "catalog"
     ) {
-        // Стартовий екран — Каталог країн
         composable("catalog") {
             MainCatalogScreen(
-                onItemClick = { countryId ->
-                    navController.navigate("detail/$countryId")
-                }
+                uiState = uiState,
+                onRegionSelected = { viewModel.selectRegion(it) },
+                onItemClick = { countryId -> navController.navigate("detail/$countryId") },
+                onSettingsClick = { navController.navigate("settings") }
             )
         }
 
-        // Екран деталей із передачею параметру {countryId}
         composable(
             route = "detail/{countryId}",
             arguments = listOf(navArgument("countryId") { type = NavType.StringType })
@@ -74,21 +78,41 @@ fun AppNavigation() {
                 onBackClick = { navController.popBackStack() }
             )
         }
+
+        // Новий маршрут для Екрана налаштувань
+        composable("settings") {
+            SettingsScreen(
+                currentSortOrder = uiState.sortOrder,
+                onSortOrderChanged = { newSortOrder ->
+                    viewModel.setSortOrder(newSortOrder)
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainCatalogScreen(
+    uiState: com.example.worldguide.model.MainUiState,
+    onRegionSelected: (String) -> Unit,
     onItemClick: (String) -> Unit,
-    viewModel: MainViewModel = viewModel()
+    onSettingsClick: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("WorldGuide — Каталог країн", fontWeight = FontWeight.Bold) },
+                title = { Text("WorldGuide — Каталог", fontWeight = FontWeight.Bold) },
+                actions = {
+                    // Кнопка входу на екран налаштувань
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Налаштування"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -104,9 +128,7 @@ fun MainCatalogScreen(
             RegionFilterChips(
                 options = uiState.availableRegions,
                 selectedOption = uiState.selectedRegion,
-                onOptionSelected = { newRegion ->
-                    viewModel.selectRegion(newRegion)
-                }
+                onOptionSelected = onRegionSelected
             )
 
             if (uiState.filteredCountries.isEmpty()) {
@@ -171,13 +193,6 @@ fun EmptyStateView(selectedRegion: String) {
                 text = "Країн у регіоні «$selectedRegion» не знайдено",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Спробуйте обрати інший регіон зі списку вище.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
         }

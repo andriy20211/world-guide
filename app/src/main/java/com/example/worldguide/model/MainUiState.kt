@@ -1,16 +1,25 @@
 package com.example.worldguide.model
 
-// Стан екрана описується окремим data class з полями val (immutable)
+import com.example.worldguide.data.UserPreferencesRepository
+
 data class MainUiState(
     val selectedRegion: String = "Всі",
     val availableRegions: List<String> = listOf("Всі", "Europe", "Asia", "Americas", "Africa", "Oceania"),
-    val countries: List<Country> = sampleCountries
+    val countries: List<Country> = sampleCountries,
+    val sortOrder: String = UserPreferencesRepository.SORT_BY_NAME // Спосіб сортування
 ) {
-    // Відфільтрований список обчислюється на основі обраного регіону
+    // Відфільтрований та відсортований список обчислюється на основі стану
     val filteredCountries: List<Country>
-        get() = if (selectedRegion == "Всі") {
-            countries
-        } else {
-            countries.filter { it.region.equals(selectedRegion, ignoreCase = true) }
+        get() {
+            val filtered = if (selectedRegion == "Всі") {
+                countries
+            } else {
+                countries.filter { it.region.equals(selectedRegion, ignoreCase = true) }
+            }
+
+            return when (sortOrder) {
+                UserPreferencesRepository.SORT_BY_POPULATION -> filtered.sortedByDescending { it.population }
+                else -> filtered.sortedBy { it.name.common }
+            }
         }
 }
