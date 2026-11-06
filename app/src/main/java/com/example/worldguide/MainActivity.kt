@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,7 +24,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.worldguide.model.Country
+import com.example.worldguide.ui.DetailScreen
 import com.example.worldguide.ui.MainViewModel
 import com.example.worldguide.ui.theme.WorldGuideTheme
 
@@ -32,8 +39,40 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             WorldGuideTheme {
-                MainCatalogScreen()
+                AppNavigation()
             }
+        }
+    }
+}
+
+// Позиціювання NavHost та маршутизація екранів
+@Composable
+fun AppNavigation() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "catalog"
+    ) {
+        // Стартовий екран — Каталог країн
+        composable("catalog") {
+            MainCatalogScreen(
+                onItemClick = { countryId ->
+                    navController.navigate("detail/$countryId")
+                }
+            )
+        }
+
+        // Екран деталей із передачею параметру {countryId}
+        composable(
+            route = "detail/{countryId}",
+            arguments = listOf(navArgument("countryId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val countryId = backStackEntry.arguments?.getString("countryId")
+            DetailScreen(
+                countryId = countryId,
+                onBackClick = { navController.popBackStack() }
+            )
         }
     }
 }
@@ -41,10 +80,9 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainCatalogScreen(
-    // Отримуємо ViewModel штатним способом за допомогою viewModel()
+    onItemClick: (String) -> Unit,
     viewModel: MainViewModel = viewModel()
 ) {
-    // Підписуємося на стан ViewModel
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -63,7 +101,6 @@ fun MainCatalogScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Передаємо варіанти, обране значення та викликаємо подію ViewModel
             RegionFilterChips(
                 options = uiState.availableRegions,
                 selectedOption = uiState.selectedRegion,
@@ -81,7 +118,10 @@ fun MainCatalogScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(uiState.filteredCountries) { country ->
-                        CountryCard(country = country)
+                        CountryCard(
+                            country = country,
+                            onClick = { onItemClick(country.id) }
+                        )
                     }
                 }
             }
@@ -145,9 +185,14 @@ fun EmptyStateView(selectedRegion: String) {
 }
 
 @Composable
-fun CountryCard(country: Country) {
+fun CountryCard(
+    country: Country,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
