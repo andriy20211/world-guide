@@ -1,4 +1,4 @@
-package com.example.worldguide.model
+package com.example.worldguide.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
