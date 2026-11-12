@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.worldguide.model.Country
-import java.util.Locale
 
 @Composable
 fun CountryCard(
@@ -101,7 +100,7 @@ fun CountryCard(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = String.format(Locale.US, "%,d", country.population),
+                        text = String.format("%,d", country.population),
                         fontWeight = FontWeight.SemiBold
                     )
                 }

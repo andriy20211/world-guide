@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -49,6 +50,8 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsState()
+    // Зберігаємо стан прокрутки на рівні навігації, щоб гарантовано не втрачати позицію після повернення з деталей
+    val catalogListState = rememberLazyListState()
 
     NavHost(
         navController = navController,
@@ -57,6 +60,7 @@ fun AppNavigation(
         composable("catalog") {
             MainCatalogScreen(
                 uiState = uiState,
+                listState = catalogListState,
                 onRegionSelected = { viewModel.selectRegion(it) },
                 onItemClick = { countryId -> navController.navigate("detail/$countryId") },
                 onSettingsClick = { navController.navigate("settings") },
@@ -91,13 +95,12 @@ fun AppNavigation(
 @Composable
 fun MainCatalogScreen(
     uiState: MainUiState,
+    listState: LazyListState,
     onRegionSelected: (String) -> Unit,
     onItemClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     onRetryClick: () -> Unit
 ) {
-    val listState = rememberLazyListState()
-
     Scaffold(
         topBar = {
             TopAppBar(

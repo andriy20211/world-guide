@@ -40,7 +40,7 @@ data class FlagsDto(
 
 // Мапер: перетворення DTO мережі у внутрішню модель domain-шару Country
 fun CountryDto.toDomain(): Country {
-    val countryId = cca3 ?: "unknown"
+    val countryId = cca3?.takeIf { it.isNotBlank() } ?: "${name?.common ?: "country"}_${population ?: 0L}"
     val commonName = name?.common ?: "Невідома країна"
     val officialName = name?.official ?: commonName
 
